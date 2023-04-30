@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Map</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f0f0;}
+        #mind-map {position: relative; width: 1000px; height: 600px; background-color: white;}
+        .node {position: absolute; display: flex; flex-direction: column; align-items: center; min-width: 100px; padding: 10px; background-color: #e0e0e0; border-radius: 5px; cursor: move;}
+        input[type="text"] {width: 100%; margin-bottom: 10px;}
+        .connector {position: absolute; width: 100%; height: 100%; pointer-events: none;}
+        path {stroke: black; stroke-width: 2; fill: none;}
+    </style>
+</head>
+<body>
+    <div id="mind-map"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script src="js/DrawSVGPlugin.min.js"></script>
+    <script>
+        let mindMap = document.getElementById('mind-map');
+
+        function createNode(parentNode, posX, posY, depth = 0, parentAngle = 0) {
+            let node = document.createElement('div');
+            node.classList.add('node');
+            node.style.left = `${posX}px`;
+            node.style.top = `${posY}px`;
+
+            let input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = depth === 0 ? 'Enter title' : 'Enter keyword';
+            node.appendChild(input);
+
+            let addButton = document.createElement('button');
+            addButton.textContent = '+';
+            node.appendChild(addButton);
+
+            addButton.addEventListener('click', function() {
+                let angleInRadians = (parentAngle * Math.PI) / 180;
+                let newNodePosX = posX + 100 * Math.cos(angleInRadians);
+                let newNodePosY = posY + 100 * Math.sin(angleInRadians);
+                createNode(node, newNodePosX, newNodePosY, depth + 1, parentAngle + (depth % 2 === 0 ? 30 : -30));
+            });
+
+            input.addEventListener('mousedown', function(event) {
+                event.stopPropagation();
+            });
+
+            let isDragging = false;
+            let dragOffsetX = 0;
+            let dragOffsetY = 0;
+
+            node.addEventListener('mousedown', function(event) {
+                isDragging = true;
+                dragOffsetX = event.clientX - node.getBoundingClientRect().left;
+                dragOffsetY = event.clientY - node.getBoundingClientRect().top;
+                event.preventDefault();
+            });
+
+            document.addEventListener('mousemove', function(event) {
+    if (isDragging) {
+        posX = event.clientX - dragOffsetX;
+        posY = event.clientY - dragOffsetY;
+        node.style.left = `${posX}px`;
+        node.style.top = `${posY}px`;
+
+        if (parentNode && connector) {
+            let controlX = (parentNode.offsetLeft + posX) / 2;
+            let controlY = (parentNode.offsetTop + posY) / 2;
+            let newPath = `M${parentNode.offsetLeft + parentNode.offsetWidth / 2},${parentNode.offsetTop + parentNode.offsetHeight / 2} Q${controlX},${controlY} ${posX + node.offsetWidth / 2},${posY + node.offsetHeight / 2}`;
+            connector.setAttribute('d', newPath);
+        }
+    }
+});
+
+document.addEventListener('mouseup', function() {
+    isDragging = false;
+});
+
+mindMap.appendChild(node);
+
+let connector;
+if (parentNode) {
+    let controlX = (parentNode.offsetLeft + posX) / 2;
+    let controlY = (parentNode.offsetTop + posY) / 2;
+    let newPath = `M${parentNode.offsetLeft + parentNode.offsetWidth / 2},${parentNode.offsetTop + parentNode.offsetHeight / 2} Q${controlX},${controlY} ${posX + node.offsetWidth / 2},${posY + node.offsetHeight / 2}`;
+
+    let connectorElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    connectorElement.setAttribute('d', newPath);
+    connector = connectorElement;
+
+    let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.classList.add('connector');
+    svg.appendChild(connector);
+    mindMap.appendChild(svg);
+}
+}
+
+createNode(null, mindMap.clientWidth / 2 - 50, mindMap.clientHeight / 2 - 50);
+</script>
+</body>
+</html>
